@@ -11,13 +11,13 @@ static const unsigned int gappov    = 10;       /* vert outer gap between window
 static const int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]          = { "Fira Code:pixelsize=24:antialias=true:autohint=true" };
-static const char dmenufont[]       =  "Fira Code:pixelsize=24:antialias=true:autohint=true";
-static const char col_gray1[]       = "#222222";
-static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#bbbbbb";
-static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#005577";
+static const char *fonts[]          = { "FiraCode Nerd Font Mono:pixelsize=24:antialias=true:autohint=true" };
+static const char dmenufont[]       =   "FiraCode Nerd Font Mono:pixelsize=24:antialias=true:autohint=true";
+static const char col_gray1[]       = "#282828";
+static const char col_gray2[]       = "#504945";
+static const char col_gray3[]       = "#fbf1c7";
+static const char col_gray4[]       = "#fbf1c7";
+static const char col_cyan[]        = "#076678";
 static const char *colors[][3]      = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
@@ -112,6 +112,11 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_m,      quit,           {0} },
+	#include <X11/XF86keysym.h>
+	{ 0, XF86XK_AudioMute,          spawn,  SHCMD("dwmb-volume mute") },
+	{ 0, XF86XK_AudioRaiseVolume,   spawn,  SHCMD("dwmb-volume 5%+") },
+	{ 0, XF86XK_AudioLowerVolume,   spawn,  SHCMD("dwmb-volume 5%-") },
+
 };
 
 /* button definitions */
