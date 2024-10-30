@@ -63,13 +63,13 @@ static const Layout layouts[] = {
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
-#define STATUSBAR "dwmblocks"
+#define STATUSBAR "dwmsbar"
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
-static const char *webcmd[]   = { "qutebrowser", NULL };
+static const char *webcmd[]   = { "firefox", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -79,8 +79,8 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
-	// { MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
-	// { MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
+	{ MODKEY|ShiftMask,             XK_i,      incnmaster,     {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY,                       XK_g,      incrgaps,       {.i = +5 } },
@@ -115,29 +115,35 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_m,      quit,           {0} },
 	#include <X11/XF86keysym.h>
-	{ 0, XF86XK_AudioMute,          spawn,  SHCMD("dwmb-volume mute") },
-	{ 0, XF86XK_AudioRaiseVolume,   spawn,  SHCMD("dwmb-volume 5%+") },
-	{ 0, XF86XK_AudioLowerVolume,   spawn,  SHCMD("dwmb-volume 5%-") },
+	{ 0, XF86XK_AudioMute,          spawn,  SHCMD("volume -m -s") },
+	{ 0, XF86XK_AudioRaiseVolume,   spawn,  SHCMD("volume +5% -s") },
+	{ 0, XF86XK_AudioLowerVolume,   spawn,  SHCMD("volume -5% -s") },
 
 };
 
 /* button definitions */
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
+#define LeftClick   Button1
+#define RightClick  Button3
+#define MiddleClick Button2
+#define ScrollUp    Button4
+#define ScrollDown  Button5
 static const Button buttons[] = {
 	/* click                event mask      button          function        argument */
-	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
-	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
-	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
-	// { ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
-	{ ClkStatusText,        0,              Button1,        sigstatusbar,   {.i = 1} },
-	{ ClkStatusText,        0,              Button2,        sigstatusbar,   {.i = 2} },
-	{ ClkStatusText,        0,              Button3,        sigstatusbar,   {.i = 3} },
-	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
-	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
-	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
-	{ ClkTagBar,            0,              Button1,        view,           {0} },
-	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
-	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
-	{ ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
+	{ ClkLtSymbol,          0,              LeftClick,      setlayout,      {0} },
+	{ ClkLtSymbol,          0,              RightClick,     setlayout,      {.v = &layouts[2]} },
+	{ ClkWinTitle,          0,              MiddleClick,    zoom,           {0} },
+	{ ClkStatusText,        0,              LeftClick,      sigstatusbar,   {.i = 1} },
+	{ ClkStatusText,        0,              MiddleClick,    sigstatusbar,   {.i = 2} },
+	{ ClkStatusText,        0,              RightClick,     sigstatusbar,   {.i = 3} },
+	{ ClkStatusText,        0,              ScrollUp,       sigstatusbar,   {.i = 4} },
+	{ ClkStatusText,        0,              ScrollDown,     sigstatusbar,   {.i = 5} },
+	{ ClkClientWin,         MODKEY,         LeftClick,      movemouse,      {0} },
+	{ ClkClientWin,         MODKEY,         MiddleClick,    togglefloating, {0} },
+	{ ClkClientWin,         MODKEY,         RightClick,     resizemouse,    {0} },
+	{ ClkTagBar,            0,              LeftClick,      view,           {0} },
+	{ ClkTagBar,            0,              RightClick,     toggleview,     {0} },
+	{ ClkTagBar,            MODKEY,         LeftClick,      tag,            {0} },
+	{ ClkTagBar,            MODKEY,         RightClick,     toggletag,      {0} },
 };
 
