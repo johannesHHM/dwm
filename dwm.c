@@ -225,6 +225,7 @@ static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
+static void togglefullscr(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -1771,7 +1772,6 @@ showhide(Client *c)
 
 int sockfd;
 struct sockaddr_un addr;
-void ipcsetup();
 
 void
 sigstatusbar(const Arg *arg)
@@ -1796,9 +1796,6 @@ sigstatusbar(const Arg *arg)
 
 	printf("sig: %d\n", statussig);
 	perror("testerr");
-	// Create a socket
-
-	ipcsetup();
 
 	// Send the message
 	char MESSAGE[32];
@@ -1919,6 +1916,13 @@ togglefloating(const Arg *arg)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 			selmon->sel->w, selmon->sel->h, 0);
 	arrange(selmon);
+}
+
+void
+togglefullscr(const Arg *arg)
+{
+  if(selmon->sel)
+    setfullscreen(selmon->sel, !selmon->sel->isfullscreen);
 }
 
 void
@@ -2488,12 +2492,6 @@ zoom(const Arg *arg)
 	if (c == nexttiled(selmon->clients) && !(c = nexttiled(c->next)))
 		return;
 	pop(c);
-}
-
-void
-ipcsetup()
-{
-	
 }
 
 int
