@@ -31,6 +31,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/poll.h> //TODO neww!
+#include <fcntl.h>
 #include <sys/un.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
@@ -187,6 +189,12 @@ static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
+// IPC stuff
+static int handlexevent(struct pollfd *pfd);
+static int handlesock(struct pollfd *pfd);
+static int fdinpoll(int fd);
+static int disconnectclient(int fd);
+static void handleclientmsg(int fd);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
@@ -216,6 +224,7 @@ static void setgaps(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
+static void setuppoll(void);
 static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigstatusbar(const Arg *arg);
@@ -283,6 +292,11 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[UnmapNotify] = unmapnotify
 };
 static Atom wmatom[WMLast], netatom[NetLast];
+#define MAX_POLLFDS 7
+static int nfds = 0;
+static struct pollfd poll_fds[MAX_POLLFDS];
+static int dpy_fd;
+static int sock_fd;
 static int running = 1;
 static Cur *cursor[CurLast];
 static Clr **scheme;
@@ -1494,15 +1508,122 @@ restack(Monitor *m)
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
 
+int
+handlexevent(struct pollfd *pfd)
+{
+	if (pfd->revents & POLLIN) {
+		XEvent ev;
+		while (running && XPending(dpy)) {
+			XNextEvent(dpy, &ev);
+			if (handler[ev.type])
+				handler[ev.type](&ev);
+		}
+	} else if (pfd->revents & POLLHUP) {
+		return -1;
+	}
+	return 0;
+}
+
+int
+handlesock(struct pollfd *pfd)
+{
+	if (!(pfd->revents & POLLIN)) return -1;
+
+	int client_fd = -1;
+	client_fd = accept(sock_fd, NULL, NULL);
+
+	if (client_fd < 0) return -1;
+
+	if (nfds == MAX_POLLFDS) {
+		#define REJECT "error: max connected clients reached"
+		send(client_fd, REJECT, sizeof(REJECT), 0);
+		close(client_fd);
+		return -1;
+	}
+
+	if (fcntl(client_fd, F_SETFD, FD_CLOEXEC) < 0) {
+		shutdown(client_fd, SHUT_RDWR);
+		close(client_fd);
+	}
+
+	poll_fds[nfds].fd = client_fd;
+	poll_fds[nfds].events = POLLIN | POLLHUP;
+	nfds++;
+
+	return client_fd;
+}
+
+int
+fdinpoll(int fd)
+{
+	for (int i = 0; i < nfds; i++)
+		if (poll_fds[i].fd == fd)
+			return i;
+	return -1;
+}
+
+int
+disconnectclient(int fd)
+{
+	int pos = fdinpoll(fd); 
+	if (pos == -1)
+		return -1;
+	
+	poll_fds[pos].fd = poll_fds[nfds - 1].fd;
+	poll_fds[pos].events = poll_fds[nfds - 1].events;
+	nfds--;
+
+	return 1;
+}
+
+void
+handleclientmsg(int fd)
+{
+	char buffer[256];
+	int n = read(fd, buffer, sizeof(buffer) - 1);
+	if (n <= 0) {
+		fprintf(stderr, "ERR/DIS: client_fd: '%d'\n", fd);
+		return;
+	} else {
+		buffer[n] = '\0';
+		fprintf(stderr, "Message from '%d': %s\n", fd, buffer);
+	}
+}
+
 void
 run(void)
 {
-	XEvent ev;
-	/* main event loop */
 	XSync(dpy, False);
-	while (running && !XNextEvent(dpy, &ev))
-		if (handler[ev.type])
-			handler[ev.type](&ev); /* call handler */
+	int poll_ret = 0;
+	
+	while(running) {
+		poll_ret = poll(poll_fds, nfds, INFTIM);
+		if (poll_ret == -1) {
+			perror("Poll failed!");
+			exit(1);
+		}
+		for (int i = 0; i < nfds && poll_ret > 0; i++) {
+			struct pollfd *poll_fd = &poll_fds[i];
+			if (poll_fd->revents == 0)
+				continue;
+			poll_ret--;
+			if (poll_fd->fd == dpy_fd) {
+				handlexevent(poll_fd);
+			}
+			else if (poll_fd->fd == sock_fd) {
+				handlesock(poll_fd);
+			}
+			else {
+				if (poll_fd->revents & POLLHUP) {
+					disconnectclient(poll_fd->fd);
+				} else if (fdinpoll(poll_fd->fd)) {
+					handleclientmsg(poll_fd->fd);
+				} else {
+					fprintf(stderr, "ERROR: message from unknown source! fd: '%d'\n", poll_fd->fd);
+				}
+			}
+		}
+	}
 }
 
 void
@@ -1736,6 +1857,46 @@ setup(void)
 	XSelectInput(dpy, root, wa.event_mask);
 	grabkeys();
 	focus(NULL);
+	setuppoll();
+}
+
+void
+setuppoll(void)
+{
+	dpy_fd = ConnectionNumber(dpy);
+	poll_fds[0].fd = dpy_fd;
+	poll_fds[0].events = POLLIN;
+	nfds++;	
+
+	#define SOCKET2_PATH "/tmp/dwm2.sock"
+
+	struct sockaddr_un sock_addr;
+	memset(&sock_addr, 0, sizeof(struct sockaddr_un));
+	sock_addr.sun_family = AF_UNIX;
+	strncpy(sock_addr.sun_path, SOCKET2_PATH, sizeof(sock_addr.sun_path) - 1);
+
+	sock_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+	if (sock_fd == -1) {
+		fputs("Failed to create socket\n", stderr);
+		return;
+	}
+
+	unlink(SOCKET2_PATH);
+
+	if (bind(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1) {
+		fputs("Failed to bind socket\n", stderr);
+		close(sock_fd);
+		return;
+	}
+	#define BACKLOG 5
+	if (listen(sock_fd, BACKLOG) < 0) {
+		fputs("Failed to listen to socket\n", stderr);
+		return;
+	}
+
+	poll_fds[1].fd = sock_fd;
+	poll_fds[1].events = POLLIN;
+	nfds++;
 }
 
 void
