@@ -40,6 +40,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
 #include <X11/Xutil.h>
+#include <X11/Xresource.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
@@ -155,6 +156,19 @@ typedef struct {
 	int monitor;
 } Rule;
 
+/* Xresources preferences */
+enum resource_type {
+	STRING = 0,
+	INTEGER = 1,
+	FLOAT = 2
+};
+
+typedef struct {
+	char *name;
+	enum resource_type type;
+	void *dst;
+} ResourcePref;
+
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -191,6 +205,7 @@ static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
 // IPC stuff
+static void xrdbreload(const Arg *arg);
 static int handlexevent(struct pollfd *pfd);
 static int handlesock(struct pollfd *pfd);
 static int fdinpoll(int fd);
@@ -257,6 +272,8 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+static void load_xresources(void);
+static void resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst);
 
 static pid_t getparentprocess(pid_t p);
 static int isdescprocess(pid_t p, pid_t c);
@@ -863,6 +880,10 @@ drawbar(Monitor *m)
 	if ((w = m->ww - tw - x) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
+			
+			printf("DEBUG: m->sel->name %s\n", m->sel->name); //TODO J. remove!!
+			printf("x: %d, w: %d, bh: %d", x, w, bh);
+			
 			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
 			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
@@ -2233,6 +2254,60 @@ updateclientlist(void)
 				(unsigned char *) &(c->win), 1);
 }
 
+void
+resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst)
+{
+	char *sdst = NULL;
+	int *idst = NULL;
+	float *fdst = NULL;
+
+	sdst = dst;
+	idst = dst;
+	fdst = dst;
+
+	char fullname[256];
+	char *type;
+	XrmValue ret;
+
+	snprintf(fullname, sizeof(fullname), "%s.%s", "dwm", name);
+	fullname[sizeof(fullname) - 1] = '\0';
+
+	XrmGetResource(db, fullname, "*", &type, &ret);
+	if (!(ret.addr == NULL || strncmp("String", type, 64)))
+	{
+		switch (rtype) {
+		case STRING:
+			strcpy(sdst, ret.addr);
+			break;
+		case INTEGER:
+			*idst = strtoul(ret.addr, NULL, 10);
+			break;
+		case FLOAT:
+			*fdst = strtof(ret.addr, NULL);
+			break;
+		}
+	}
+}
+
+void
+load_xresources(void)
+{
+	Display *display;
+	char *resm;
+	XrmDatabase db;
+	ResourcePref *p;
+
+	display = XOpenDisplay(NULL);
+	resm = XResourceManagerString(display);
+	if (!resm)
+		return;
+
+	db = XrmGetStringDatabase(resm);
+	for (p = resources; p < resources + LENGTH(resources); p++)
+		resource_load(db, p->name, p->type, p->dst);
+	XCloseDisplay(display);
+}
+
 int
 updategeom(void)
 {
@@ -2647,6 +2722,42 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
 }
 
 void
+xrdbreload(const Arg *arg)
+{
+	load_xresources();
+	int i;
+	for (i = 0; i < LENGTH(colors); i++) {
+		/* color scheme reload */
+		free(scheme[i]);
+		scheme[i] = drw_scm_create(drw, colors[i], 3);
+	}
+
+	/* font reload */
+	xfont_free(drw->fonts);
+	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
+		die("no fonts could be loaded in xrdbreload.");
+	lrpad = drw->fonts->h;
+	bh = drw->fonts->h + 2;
+
+	updategeom();
+	drw_resize(drw, sw, bh);
+	updatebars();
+	Monitor *m;
+	Client *c;
+	for (m = mons; m; m = m->next) {
+		updatebarpos(m);
+		for (c = m->clients; c; c = c->next) {
+			if (c->isfullscreen)
+				resizeclient(c, m->mx, m->my, m->mw, m->mh);
+			c->bw = borderpx;
+		}
+		XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
+	}
+	// focus(NULL);
+	arrange(NULL);
+}
+
+void
 zoom(const Arg *arg)
 {
 	Client *c = selmon->sel;
@@ -2697,6 +2808,8 @@ main(int argc, char *argv[])
 	if (!(xcon = XGetXCBConnection(dpy)))
 		die("dwm: cannot get xcb connection\n");
 	checkotherwm();
+	XrmInitialize();
+	load_xresources();
 	setup();
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath proc exec ps unix", NULL) == -1)

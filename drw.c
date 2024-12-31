@@ -128,7 +128,7 @@ xfont_create(Drw *drw, const char *fontname, FcPattern *fontpattern)
 	return font;
 }
 
-static void
+void
 xfont_free(Fnt *font)
 {
 	if (!font)
@@ -140,7 +140,7 @@ xfont_free(Fnt *font)
 }
 
 Fnt*
-drw_fontset_create(Drw* drw, const char *fonts[], size_t fontcount)
+drw_fontset_create(Drw* drw, char *fonts[], size_t fontcount)
 {
 	Fnt *cur, *ret = NULL;
 	size_t i;
@@ -182,7 +182,7 @@ drw_clr_create(Drw *drw, Clr *dest, const char *clrname)
 /* Wrapper to create color schemes. The caller has to call free(3) on the
  * returned color scheme when done using it. */
 Clr *
-drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount)
+drw_scm_create(Drw *drw, char *clrnames[], size_t clrcount)
 {
 	size_t i;
 	Clr *ret;
@@ -238,7 +238,8 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 	XftResult result;
 	int charexists = 0, overflow = 0;
 	/* keep track of a couple codepoints for which we have no match. */
-	static unsigned int nomatches[128], ellipsis_width, invalid_width;
+	static unsigned int nomatches[128];
+	unsigned int ellipsis_width = 0, invalid_width = 0;
 	static const char invalid[] = "�";
 
 	if (!drw || (render && (!drw->scheme || !w)) || !text || !drw->fonts)
@@ -259,10 +260,10 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 	}
 
 	usedfont = drw->fonts;
-	if (!ellipsis_width && render)
+	if (render) {
 		ellipsis_width = drw_fontset_getwidth(drw, "...");
-	if (!invalid_width && render)
 		invalid_width = drw_fontset_getwidth(drw, invalid);
+	}
 	while (1) {
 		ew = ellipsis_len = utf8err = utf8charlen = utf8strlen = 0;
 		utf8str = text;
