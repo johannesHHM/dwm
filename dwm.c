@@ -2751,6 +2751,7 @@ xrdbreload(const Arg *arg)
 				resizeclient(c, m->mx, m->my, m->mw, m->mh);
 			c->bw = borderpx;
 		}
+		m->topbar = topbar;
 		XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
 	}
 	// focus(NULL);

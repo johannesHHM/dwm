@@ -66,7 +66,7 @@ static const Layout layouts[] = {
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_normbg, "-nf", col_foreground, "-sb", col_highlight, "-sf", col_foreground, NULL };
 static const char *termcmd[]  = { "st", NULL };
-static const char *webcmd[]   = { "firefox", NULL };
+static const char *webcd[]   = { "firefox", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -117,14 +117,15 @@ static const Key keys[] = {
 };
 
 ResourcePref resources[] = {
-	{"font",	   STRING,   &font},
-	{"font",	   STRING,   &dmenufont},
-	{"borderpx",	   INTEGER,  &borderpx},
-	{"gappx",	   INTEGER,  &gappx},
-	{"normbo",     STRING,   &col_normbo},
-	{"normbg",     STRING,   &col_normbg},
-	{"foreground", STRING,   &col_foreground},
-	{"highlight",  STRING,   &col_highlight},
+	{"font",	STRING,   &font},
+	{"font",	STRING,   &dmenufont},
+	{"borderpx",	INTEGER,  &borderpx},
+	{"gappx",	INTEGER,  &gappx},
+	{"topbar",	INTEGER,  &topbar},
+	{"normbo",      STRING,   &col_normbo},
+	{"normbg",      STRING,   &col_normbg},
+	{"foreground",  STRING,   &col_foreground},
+	{"highlight",   STRING,   &col_highlight},
 };
 
 /* button definitions */
