@@ -236,6 +236,7 @@ static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setgaps(const Arg *arg);
+static void setgapsabs(const Arg *arg);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
@@ -880,10 +881,6 @@ drawbar(Monitor *m)
 	if ((w = m->ww - tw - x) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
-			
-			printf("DEBUG: m->sel->name %s\n", m->sel->name); //TODO J. remove!!
-			printf("x: %d, w: %d, bh: %d", x, w, bh);
-			
 			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
 			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
@@ -1588,6 +1585,7 @@ fdinpoll(int fd)
 int
 disconnectclient(int fd)
 {
+	printf("Disconnecting client: %d\n", fd);
 	int pos = fdinpoll(fd); 
 	if (pos == -1)
 		return -1;
@@ -1599,6 +1597,82 @@ disconnectclient(int fd)
 	return 1;
 }
 
+typedef enum {
+	ARG_TYPE_NONE = 0,
+	ARG_TYPE_INT = 1,
+	ARG_TYPE_UINT = 2,
+	ARG_TYPE_FLOAT = 3,
+	ARG_TYPE_STRING = 4,
+} ArgType;
+
+typedef struct {
+	const char *name;
+	const int namelen;
+	void (*func)(const Arg *);
+	const ArgType argtype;
+} IpcKey;
+
+#define IPCKEY(NAME, TYPE) \
+	{#NAME, sizeof(#NAME)-1, NAME, TYPE},
+
+IpcKey ipcKeys[] = {
+	IPCKEY(xrdbreload,  ARG_TYPE_NONE)
+	IPCKEY(setgaps,     ARG_TYPE_INT)
+	IPCKEY(setgapsabs,  ARG_TYPE_INT)
+	IPCKEY(zoom,        ARG_TYPE_NONE)
+};
+
+int
+getcmdarg(char *cmd, const IpcKey *key, Arg *arg) {
+	if (!(cmd[key->namelen] == ' ' && cmd[key->namelen + 1] != '\0'))
+		return 1;
+
+	char *sarg = cmd + key->namelen + 1;
+	char *ep;
+
+	switch (key->argtype) {
+
+	case ARG_TYPE_INT:
+		arg->i = (int)strtol(sarg, &ep, 10);
+		if (*ep != '\0') return 1;
+		break;
+	case ARG_TYPE_UINT:
+		arg->ui = (unsigned int)strtoul(sarg, &ep, 10);
+		if (*ep != '\0') return 1;
+		break;
+	case ARG_TYPE_FLOAT:
+		arg->f = strtof(sarg, &ep);
+		if (*ep != '\0') return 1;
+		break;
+	case ARG_TYPE_STRING:
+		arg->v = sarg;
+		printf("the string: %s\n", arg->v);
+		break;
+	default:
+		return 1;
+	}
+	return 0;
+}
+
+void
+runclientmsg(char *cmd)
+{
+	printf("Running command: %s\n", cmd);
+	IpcKey *k;
+	
+	for (k = ipcKeys; k < ipcKeys + LENGTH(ipcKeys); k++) {
+		if (strncmp(cmd, k->name, k->namelen) == 0 
+			&& (cmd[k->namelen] == ' ' || cmd[k->namelen] == '\0' )) {
+			Arg arg = {0};
+			if (k->argtype != ARG_TYPE_NONE)
+				if (getcmdarg(cmd, k, &arg)) // TODO collapse into one if
+					return;
+			printf("GOT TO THE RUN\n");
+			k->func(&arg);
+		}
+	}
+}
+
 void
 handleclientmsg(int fd)
 {
@@ -1607,9 +1681,28 @@ handleclientmsg(int fd)
 	if (n <= 0) {
 		fprintf(stderr, "ERR/DIS: client_fd: '%d'\n", fd);
 		return;
-	} else {
-		buffer[n] = '\0';
-		fprintf(stderr, "Message from '%d': %s\n", fd, buffer);
+	}
+	buffer[n] = '\0';
+	fprintf(stderr, "Message from '%d': %s\n", fd, buffer);
+	
+	char cmd[256];
+	char *bp = buffer;
+	char *cp = cmd;
+	while (1) {
+		if (*bp == '\n') {
+			bp++;
+			continue;
+		}
+		*cp = *bp;
+		cp++; bp++;
+		if (*bp == ':' || *bp == '\0') {
+			*cp = '\0';
+			runclientmsg(cmd);
+			if (*bp == '\0')
+				break;
+			cp = cmd;
+			bp++;
+		}
 	}
 }
 
@@ -1777,6 +1870,17 @@ setgaps(const Arg *arg)
 }
 
 void
+setgapsabs(const Arg *arg)
+{
+	printf("Gapps: %d, Arg->i: %d\n", selmon->gappx, arg->i);
+	if (arg->i < 0)
+		selmon->gappx = 0;
+	else
+		selmon->gappx = arg->i;
+	arrange(selmon);
+}
+
+void
 setlayout(const Arg *arg)
 {
 	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
@@ -1891,12 +1995,12 @@ setuppoll(void)
 	poll_fds[0].events = POLLIN;
 	nfds++;	
 
-	#define SOCKET2_PATH "/tmp/dwm2.sock"
+	#define DWM_SOCKET_PATH "/tmp/dwm.sock"
 
 	struct sockaddr_un sock_addr;
 	memset(&sock_addr, 0, sizeof(struct sockaddr_un));
 	sock_addr.sun_family = AF_UNIX;
-	strncpy(sock_addr.sun_path, SOCKET2_PATH, sizeof(sock_addr.sun_path) - 1);
+	strncpy(sock_addr.sun_path, DWM_SOCKET_PATH, sizeof(sock_addr.sun_path) - 1);
 
 	sock_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 	if (sock_fd == -1) {
@@ -1904,7 +2008,7 @@ setuppoll(void)
 		return;
 	}
 
-	unlink(SOCKET2_PATH);
+	unlink(DWM_SOCKET_PATH);
 
 	if (bind(sock_fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1) {
 		fputs("Failed to bind socket\n", stderr);
@@ -1959,8 +2063,8 @@ struct sockaddr_un addr;
 void
 sigstatusbar(const Arg *arg)
 {	
-	#define SOCKET_PATH "/tmp/dwm.sock"  // Path to the Unix socket
-	
+	#define BAR_SOCKET_PATH "/tmp/dwm-bar.sock"
+
 	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sockfd == -1) {
 		perror("socket");
@@ -1969,8 +2073,8 @@ sigstatusbar(const Arg *arg)
 
 	memset(&addr, 0, sizeof(struct sockaddr_un));
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
-	// Connect to the Unix socket
+	strncpy(addr.sun_path, BAR_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+	
 	if (connect(sockfd, (struct sockaddr *) &addr, sizeof(struct sockaddr_un)) == -1) {
 		perror("connect");
 		close(sockfd);
@@ -1980,34 +2084,19 @@ sigstatusbar(const Arg *arg)
 	printf("sig: %d\n", statussig);
 	perror("testerr");
 
-	// Send the message
 	char MESSAGE[32];
 	snprintf(MESSAGE, 32, "%d %d", statussig, arg->i);
 	if (send(sockfd, MESSAGE, strlen(MESSAGE), 0) == -1) {
 		perror("send");
 		close(sockfd);
 		return;
-		// exit(EXIT_FAILURE);
 	}
 
 	printf("Message sent: %s\n", MESSAGE);
 
-	// Close the socket
 	close(sockfd);
 
 	return;
-	
-	/*
-	union sigval sv;
-
-	if (!statussig)
-		return;
-	sv.sival_int = arg->i;
-	if ((statuspid = getstatusbarpid()) <= 0)
-		return;
-
-	sigqueue(statuspid, SIGRTMIN+statussig, sv);
-	*/
 }
 
 void
@@ -2015,9 +2104,12 @@ spawn(const Arg *arg)
 {
 	struct sigaction sa;
 
+	printf("In spawn\n");
+	
 	if (arg->v == dmenucmd)
 		dmenumon[0] = '0' + selmon->num;
 	if (fork() == 0) {
+		printf("In fork\n");
 		if (dpy)
 			close(ConnectionNumber(dpy));
 		setsid();
@@ -2745,16 +2837,17 @@ xrdbreload(const Arg *arg)
 	Monitor *m;
 	Client *c;
 	for (m = mons; m; m = m->next) {
+		m->topbar = topbar;
 		updatebarpos(m);
 		for (c = m->clients; c; c = c->next) {
 			if (c->isfullscreen)
 				resizeclient(c, m->mx, m->my, m->mw, m->mh);
 			c->bw = borderpx;
 		}
-		m->topbar = topbar;
 		XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
 	}
-	// focus(NULL);
+
+	focus(NULL);
 	arrange(NULL);
 }
 
