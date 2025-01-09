@@ -866,7 +866,6 @@ drawbar(Monitor *m)
 		return;
 
 	/* draw status first so it can be overdrawn by tags later */
-	/* CHANGE: status is drawn on all monitors */
 	char *text, *s, ch;
 	drw_setscheme(drw, scheme[SchemeNorm]);
 
@@ -2187,6 +2186,8 @@ tile(Monitor *m)
 	unsigned int i, n, h, mw, my, ty;
 	Client *c;
 
+	snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]=", m->nmaster);
+	
 	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
 		return;
