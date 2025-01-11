@@ -110,7 +110,6 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_m,      quit,           {0} },
-	#include <X11/XF86keysym.h>
 	{ 0, XF86XK_AudioMute,          spawn,  SHCMD("volume -m") },
         { 0, XF86XK_AudioRaiseVolume,   spawn,  SHCMD("volume raise") },
         { 0, XF86XK_AudioLowerVolume,   spawn,  SHCMD("volume lower") },
