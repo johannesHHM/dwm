@@ -67,6 +67,9 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_normbg, "-nf", col_foreground, "-sb", col_highlight, "-sf", col_foreground, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *webcmd[]   = { "firefox", NULL };
+static const char *volume_raise[]   = { "volume", "raise", NULL };
+static const char *volume_lower[]   = { "volume", "lower", NULL };
+static const char *volume_mute[]   = { "volume", "mute", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -100,6 +103,12 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_g,      setgaps,        {.i = -5 } },
 	{ MODKEY|ControlMask,		XK_g,      setgaps,        {.i = 0  } },
 	{ MODKEY,			XK_a,      xrdbreload,     { 0 } },
+        { MODKEY,                       XK_s,      spawn,	   SHCMD("snap") },
+        { MODKEY|ShiftMask,             XK_s,      spawn,          SHCMD("snap -s") },
+        { MODKEY|ControlMask,           XK_v,      spawn,          {.v = volume_mute } },
+        { MODKEY,                       XK_v,      spawn,	   {.v = volume_raise } },
+        { MODKEY|ShiftMask,             XK_v,      spawn,          {.v = volume_lower } },
+        { MODKEY|ShiftMask,             XK_x,      spawn,          SHCMD("xkill") },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
@@ -110,10 +119,9 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_m,      quit,           {0} },
-	{ 0, XF86XK_AudioMute,          spawn,  SHCMD("volume -m") },
-        { 0, XF86XK_AudioRaiseVolume,   spawn,  SHCMD("volume raise") },
-        { 0, XF86XK_AudioLowerVolume,   spawn,  SHCMD("volume lower") },
-
+	{ 0, XF86XK_AudioMute,                     spawn,          {.v = volume_mute } },
+        { 0, XF86XK_AudioRaiseVolume,              spawn,          {.v = volume_raise } },
+        { 0, XF86XK_AudioLowerVolume,              spawn,          {.v = volume_lower } },
 };
 
 ResourcePref resources[] = {
