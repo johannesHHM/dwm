@@ -109,6 +109,7 @@ static const Key keys[] = {
         { MODKEY,                       XK_v,      spawn,	   {.v = volume_raise } },
         { MODKEY|ShiftMask,             XK_v,      spawn,          {.v = volume_lower } },
         { MODKEY|ShiftMask,             XK_x,      spawn,          SHCMD("xkill") },
+        { MODKEY|ShiftMask,             XK_n,      spawn,          SHCMD("dunstctl set-paused toggle") },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)

@@ -67,6 +67,9 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_normbg, "-nf", col_foreground, "-sb", col_highlight, "-sf", col_foreground, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *webcmd[]   = { "firefox", NULL };
+static const char *volume_raise[]   = { "volume", "raise", NULL };
+static const char *volume_lower[]   = { "volume", "lower", NULL };
+static const char *volume_mute[]   = { "volume", "mute", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -78,6 +81,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_p,      incnmaster,     {.i = -1 } },
+	{ MODKEY,                       XK_o,      setnmaster,     {.i = 1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY,                       XK_Return, zoom,           {0} },
@@ -99,6 +103,13 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_g,      setgaps,        {.i = -5 } },
 	{ MODKEY|ControlMask,		XK_g,      setgaps,        {.i = 0  } },
 	{ MODKEY,			XK_a,      xrdbreload,     { 0 } },
+        { MODKEY,                       XK_s,      spawn,	   SHCMD("snap") },
+        { MODKEY|ShiftMask,             XK_s,      spawn,          SHCMD("snap -s") },
+        { MODKEY|ControlMask,           XK_v,      spawn,          {.v = volume_mute } },
+        { MODKEY,                       XK_v,      spawn,	   {.v = volume_raise } },
+        { MODKEY|ShiftMask,             XK_v,      spawn,          {.v = volume_lower } },
+        { MODKEY|ShiftMask,             XK_x,      spawn,          SHCMD("xkill") },
+        { MODKEY|ShiftMask,             XK_n,      spawn,          SHCMD("dunstctl set-paused toggle") },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
@@ -109,40 +120,42 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_m,      quit,           {0} },
-	#include <X11/XF86keysym.h>
-	{ 0, XF86XK_AudioMute,          spawn,  SHCMD("volume -m") },
-        { 0, XF86XK_AudioRaiseVolume,   spawn,  SHCMD("volume raise") },
-        { 0, XF86XK_AudioLowerVolume,   spawn,  SHCMD("volume lower") },
-
+	{ 0, XF86XK_AudioMute,                     spawn,          {.v = volume_mute } },
+        { 0, XF86XK_AudioRaiseVolume,              spawn,          {.v = volume_raise } },
+        { 0, XF86XK_AudioLowerVolume,              spawn,          {.v = volume_lower } },
 };
 
 ResourcePref resources[] = {
-	{"font",	   STRING,   &font},
-	{"font",	   STRING,   &dmenufont},
-	{"borderpx",	   INTEGER,  &borderpx},
-	{"gappx",	   INTEGER,  &gappx},
-	{"normbo",     STRING,   &col_normbo},
-	{"normbg",     STRING,   &col_normbg},
-	{"foreground", STRING,   &col_foreground},
-	{"highlight",  STRING,   &col_highlight},
+	{"font",	STRING,   &font},
+	{"font",	STRING,   &dmenufont},
+	{"borderpx",	INTEGER,  &borderpx},
+	{"gappx",	INTEGER,  &gappx},
+	{"topbar",	INTEGER,  &topbar},
+	{"normbo",      STRING,   &col_normbo},
+	{"normbg",      STRING,   &col_normbg},
+	{"foreground",  STRING,   &col_foreground},
+	{"highlight",   STRING,   &col_highlight},
 };
 
 /* button definitions */
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
+#define LeftClick Button1
+#define RightClick Button3
+#define MiddleClick Button2
 static const Button buttons[] = {
 	/* click                event mask      button          function        argument */
-	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
-	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
-	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
-	{ ClkStatusText,        0,              Button1,        sigstatusbar,   {.i = 1} },
-	{ ClkStatusText,        0,              Button2,        sigstatusbar,   {.i = 2} },
-	{ ClkStatusText,        0,              Button3,        sigstatusbar,   {.i = 3} },
-	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
-	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
-	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
-	{ ClkTagBar,            0,              Button1,        view,           {0} },
-	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
-	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
-	{ ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
+	{ ClkLtSymbol,          0,              LeftClick,      setlayout,      {0} },
+	{ ClkLtSymbol,          0,              RightClick,     setlayout,      {.v = &layouts[2]} },
+	{ ClkWinTitle,          0,              MiddleClick,    zoom,           {0} },
+	{ ClkStatusText,        0,              LeftClick,      sigstatusbar,   {.i = 1} },
+	{ ClkStatusText,        0,              MiddleClick,    sigstatusbar,   {.i = 2} },
+	{ ClkStatusText,        0,              RightClick,     sigstatusbar,   {.i = 3} },
+	{ ClkClientWin,         MODKEY,         LeftClick,      movemouse,      {0} },
+	{ ClkClientWin,         MODKEY,         MiddleClick,    togglefloating, {0} },
+	{ ClkClientWin,         MODKEY,         RightClick,     resizemouse,    {0} },
+	{ ClkTagBar,            0,              LeftClick,      view,           {0} },
+	{ ClkTagBar,            0,              RightClick,     toggleview,     {0} },
+	{ ClkTagBar,            MODKEY,         LeftClick,      tag,            {0} },
+	{ ClkTagBar,            MODKEY,         RightClick,     toggletag,      {0} },
 };
 

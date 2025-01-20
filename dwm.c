@@ -1624,7 +1624,6 @@ fdinpoll(int fd)
 int
 disconnectclient(int fd)
 {
-	printf("Disconnecting client: %d\n", fd);
 	int pos = fdinpoll(fd); 
 	if (pos == -1)
 		return -1;
@@ -1685,7 +1684,6 @@ getcmdarg(char *cmd, const IpcKey *key, Arg *arg) {
 		break;
 	case ARG_TYPE_STRING:
 		arg->v = sarg;
-		printf("the string: %s\n", (char *)arg->v);
 		break;
 	default:
 		return 1;
@@ -1696,7 +1694,6 @@ getcmdarg(char *cmd, const IpcKey *key, Arg *arg) {
 void
 runclientmsg(char *cmd)
 {
-	printf("Running command: %s\n", cmd);
 	IpcKey *k;
 	
 	for (k = ipcKeys; k < ipcKeys + LENGTH(ipcKeys); k++) {
@@ -1706,7 +1703,6 @@ runclientmsg(char *cmd)
 			if (k->argtype != ARG_TYPE_NONE)
 				if (getcmdarg(cmd, k, &arg)) // TODO collapse into one if
 					return;
-			printf("GOT TO THE RUN\n");
 			k->func(&arg);
 		}
 	}
@@ -1722,7 +1718,6 @@ handleclientmsg(int fd)
 		return;
 	}
 	buffer[n] = '\0';
-	fprintf(stderr, "Message from '%d': %s\n", fd, buffer);
 	
 	char cmd[256];
 	char *bp = buffer;
@@ -1911,7 +1906,6 @@ setgaps(const Arg *arg)
 void
 setgapsabs(const Arg *arg)
 {
-	printf("Gapps: %d, Arg->i: %d\n", selmon->gappx, arg->i);
 	if (arg->i < 0)
 		selmon->gappx = 0;
 	else
@@ -2103,6 +2097,7 @@ void
 sigstatusbar(const Arg *arg)
 {	
 	#define BAR_SOCKET_PATH "/tmp/dwm-bar.sock"
+	char MESSAGE[32];
 
 	sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sockfd == -1) {
@@ -2120,21 +2115,14 @@ sigstatusbar(const Arg *arg)
 		return;
 	}
 
-	printf("sig: %d\n", statussig);
-	perror("testerr");
 
-	char MESSAGE[32];
 	snprintf(MESSAGE, 32, "%d %d", statussig, arg->i);
 	if (send(sockfd, MESSAGE, strlen(MESSAGE), 0) == -1) {
 		perror("send");
 		close(sockfd);
 		return;
 	}
-
-	printf("Message sent: %s\n", MESSAGE);
-
 	close(sockfd);
-
 	return;
 }
 
@@ -2142,13 +2130,10 @@ void
 spawn(const Arg *arg)
 {
 	struct sigaction sa;
-
-	printf("In spawn\n");
 	
 	if (arg->v == dmenucmd)
 		dmenumon[0] = '0' + selmon->num;
 	if (fork() == 0) {
-		printf("In fork\n");
 		if (dpy)
 			close(ConnectionNumber(dpy));
 		setsid();
