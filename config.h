@@ -8,7 +8,8 @@ static int swallowfloating    = 0;        /* 1 means swallow floating windows by
 static int showbar            = 1;        /* 0 means no bar */
 static int topbar             = 1;        /* 0 means bottom bar */
 static char font[]            = "FiraCode Nerd Font Mono:size=11:antialias=true:autohint=true";
-static char *fonts[]          = { font };
+static char font2[]           = "Symbols Nerd Font:size=18:antialias=true:autohint=true";
+static char *fonts[]          = { font, font2 };
 static char dmenufont[]       = "FiraCode Nerd Font Mono:size=11:antialias=true:autohint=true";
 
 static char col_normbg[]      = "#282828";
@@ -126,11 +127,12 @@ static const Key keys[] = {
 };
 
 ResourcePref resources[] = {
-	{"font",	STRING,   &font},
-	{"font",	STRING,   &dmenufont},
-	{"borderpx",	INTEGER,  &borderpx},
-	{"gappx",	INTEGER,  &gappx},
-	{"topbar",	INTEGER,  &topbar},
+	{"font",        STRING,   &font},
+	{"font2",       STRING,   &font2},
+	{"font",        STRING,   &dmenufont},
+	{"borderpx",    INTEGER,  &borderpx},
+	{"gappx",       INTEGER,  &gappx},
+	{"topbar",      INTEGER,  &topbar},
 	{"normbo",      STRING,   &col_normbo},
 	{"normbg",      STRING,   &col_normbg},
 	{"foreground",  STRING,   &col_foreground},
