@@ -212,7 +212,7 @@ static void xrdbreload(const Arg *arg);
 static int handlexevent(struct pollfd *pfd);
 static int handlesock(struct pollfd *pfd);
 static int fdinpoll(int fd);
-static int disconnectclient(int fd);
+static int removeclient(int fd);
 static void handleclientmsg(int fd);
 static void incnmaster(const Arg *arg);
 static void setnmaster(const Arg *arg);
@@ -1594,7 +1594,7 @@ handlesock(struct pollfd *pfd)
 	if (client_fd < 0) return -1;
 
 	if (nfds == MAX_POLLFDS) {
-		#define REJECT "error: max connected clients reached"
+		#define REJECT "error: max connected clients reached\n"
 		send(client_fd, REJECT, sizeof(REJECT), 0);
 		close(client_fd);
 		return -1;
@@ -1622,7 +1622,7 @@ fdinpoll(int fd)
 }
 
 int
-disconnectclient(int fd)
+removeclient(int fd)
 {
 	int pos = fdinpoll(fd); 
 	if (pos == -1)
@@ -1765,9 +1765,11 @@ run(void)
 			}
 			else {
 				if (poll_fd->revents & POLLHUP) {
-					disconnectclient(poll_fd->fd);
+					removeclient(poll_fd->fd);
 				} else if (fdinpoll(poll_fd->fd)) {
 					handleclientmsg(poll_fd->fd);
+					removeclient(poll_fd->fd);
+					close(poll_fd->fd);
 				} else {
 					fprintf(stderr, "ERROR: message from unknown source! fd: '%d'\n", poll_fd->fd);
 				}
