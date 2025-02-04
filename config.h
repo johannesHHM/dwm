@@ -7,6 +7,7 @@ static unsigned int snap      = 32;       /* snap pixel */
 static int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
 static int showbar            = 1;        /* 0 means no bar */
 static int topbar             = 1;        /* 0 means bottom bar */
+static int noborder           = 0;        /* 0 means bottom bar */
 static char font[]            = "FiraCode Nerd Font Mono:size=11:antialias=true:autohint=true";
 static char font2[]           = "Symbols Nerd Font:size=18:antialias=true:autohint=true";
 static char *fonts[]          = { font, font2 };
@@ -133,6 +134,7 @@ ResourcePref resources[] = {
 	{"borderpx",    INTEGER,  &borderpx},
 	{"gappx",       INTEGER,  &gappx},
 	{"topbar",      INTEGER,  &topbar},
+	{"noborder",    INTEGER,  &noborder},
 	{"normbo",      STRING,   &col_normbo},
 	{"normbg",      STRING,   &col_normbg},
 	{"foreground",  STRING,   &col_foreground},
