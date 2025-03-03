@@ -1,5 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 
+#define FONT "Fira Code"
+
 /* appearance */
 static unsigned int borderpx     = 3;   /* border pixel of windows */
 static unsigned int gappx        = 0;   /* gaps between windows */
@@ -13,10 +15,10 @@ static int swallowfloating       = 0;      /* 1 means swallow floating windows b
 static int showbar               = 1;      /* 0 means no bar */
 static int topbar                = 1;      /* 0 means bottom bar */
 static int noborder              = 0;      /* 0 means bottom bar */
-static char font[1024]           = "FiraCode Nerd Font Mono:size=18:antialias=true:autohint=true";
+static char font[1024]           = FONT":size=18:antialias=true:autohint=true";
 static char font2[1024]          = "Symbols Nerd Font:size=18:antialias=true:autohint=true";
 static char *fonts[]             = { font, font2 };
-static char dmenufont[1024]      = "FiraCode Nerd Font Mono:size=18:antialias=true:autohint=true";
+static char dmenufont[1024]      = FONT":size=18:antialias=true:autohint=true";
 static char col_background[]     = "#282828";
 static char col_altbackground[]  = "#3c3836";
 static char col_foreground[]     = "#ebdbb2";
