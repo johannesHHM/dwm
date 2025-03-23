@@ -229,6 +229,7 @@ static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
+static void quiterr(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
@@ -317,6 +318,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[UnmapNotify] = unmapnotify
 };
 static Atom wmatom[WMLast], netatom[NetLast];
+static int exit_status = EXIT_SUCCESS;
 #define MAX_POLLFDS 7
 static int nfds = 0;
 static struct pollfd poll_fds[MAX_POLLFDS];
@@ -1566,6 +1568,13 @@ void
 quit(const Arg *arg)
 {
 	running = 0;
+}
+
+void
+quiterr(const Arg *arg)
+{
+	running = 0;
+	exit_status = 7;
 }
 
 Monitor *
@@ -3132,5 +3141,5 @@ main(int argc, char *argv[])
 	run();
 	cleanup();
 	XCloseDisplay(dpy);
-	return EXIT_SUCCESS;
+	return exit_status;
 }
