@@ -112,9 +112,13 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_background, "-nf", col_foreground, "-sb", col_altbackground, "-sf", col_foreground, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *webcmd[]   = { "firefox", NULL };
+
 static const char *volume_raise[]   = { "volume", "raise", NULL };
 static const char *volume_lower[]   = { "volume", "lower", NULL };
-static const char *volume_mute[]   = { "volume", "mute", NULL };
+static const char *volume_mute[]    = { "volume", "mute",  NULL };
+
+static const char *screen_rotate[]  = { "barrelroll", "rotate", NULL };
+static const char *screen_flip[]  = { "barrelroll", "flip", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -131,7 +135,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY,                       XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
-	{ MODKEY,			XK_c,      killclient,     {0} },
+	{ MODKEY,                       XK_c,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
@@ -146,8 +150,8 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
 	{ MODKEY,                       XK_g,	   setgaps,        {.i = +5 } },
 	{ MODKEY|ShiftMask,             XK_g,      setgaps,        {.i = -5 } },
-	{ MODKEY|ControlMask,		XK_g,      setgaps,        {.i = 0  } },
-	{ MODKEY,			XK_a,      xrdbreload,     { 0 } },
+	{ MODKEY|ControlMask,           XK_g,      setgaps,        {.i = 0  } },
+	{ MODKEY,                       XK_a,      xrdbreload,     { 0 } },
         { MODKEY,                       XK_s,      spawn,	   SHCMD("snap") },
         { MODKEY|ShiftMask,             XK_s,      spawn,          SHCMD("snap -s") },
         { MODKEY|ControlMask,           XK_v,      spawn,          {.v = volume_mute } },
@@ -166,9 +170,11 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_m,      quit,           {0} },
 	{ MODKEY|ControlMask,           XK_m,      quiterr,        {0} },
-	{ 0, XF86XK_AudioMute,                     spawn,          {.v = volume_mute } },
+	{ 0, XF86XK_AudioMute,                     spawn,          {.v = volume_mute  } },
         { 0, XF86XK_AudioRaiseVolume,              spawn,          {.v = volume_raise } },
         { 0, XF86XK_AudioLowerVolume,              spawn,          {.v = volume_lower } },
+        { 0, XF86XK_TaskPane,                      spawn,          {.v = screen_flip   } },
+        { 0, XF86XK_RotateWindows,                 spawn,          {.v = screen_rotate } },
 };
 
 ResourcePref resources[] = {
