@@ -14,7 +14,8 @@ static int ulineall 		 = 0;	/* 1 to show underline on all tags, 0 for just the a
 static int swallowfloating       = 0;      /* 1 means swallow floating windows by default */
 static int showbar               = 1;      /* 0 means no bar */
 static int topbar                = 1;      /* 0 means bottom bar */
-static int noborder              = 0;      /* 0 means bottom bar */
+static int noborder              = 0;      /* 1 means no border when only active & monocle */
+static int pertagbar             = 0;      /* 0 means toggle bar is global */
 static char font[1024]           = FONT":size=18:antialias=true:autohint=true";
 static char font2[1024]          = "Symbols Nerd Font:size=18:antialias=true:autohint=true";
 static char *fonts[]             = { font, font2 };
@@ -188,6 +189,7 @@ ResourcePref resources[] = {
 	{"ulinepx",       INTEGER,  &ulinestroke},
 	{"topbar",        INTEGER,  &topbar},
 	{"noborder",      INTEGER,  &noborder},
+	{"pertagbar",     INTEGER,  &pertagbar},
 	{"background",    STRING,   &col_background},
 	{"altbackground", STRING,   &col_altbackground},
 	{"foreground",    STRING,   &col_foreground},
